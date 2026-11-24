@@ -1,0 +1,27 @@
+{
+  "allowed_s3_read": {
+    "sha256": "b8aef8c7a1e41d19074cef1da3cf2a48fbd3046b4f5311d5c58534aa0223aa18",
+    "version_present": true
+  },
+  "api_statuses": {
+    "invalid_limit": 422,
+    "invalid_token": 401,
+    "no_token": 401,
+    "unknown_dataset": 404,
+    "valid_token": 200
+  },
+  "credential_source": "iam-role",
+  "host_loopback_ports": {
+    "8000": "not_listening_on_host_loopback",
+    "27017": "not_listening_on_host_loopback"
+  },
+  "limits": "Point-in-time checks; host-loopback probes are not an external network scan.",
+  "original_sdk_and_chat": {
+    "chat_health": 200,
+    "sdk_sha256": "052fda6cc54044c921cb305473cc803e15cef2783fc1f8da3dcb9f7f2d0d6115"
+  },
+  "out_of_scope_limit": "A deliberately nonexistent key outside the role prefixes was used; unrelated data was not accessed.",
+  "out_of_scope_s3_request": "AccessDenied",
+  "timestamp": "2026-11-24T03:03:00.597611+00:00",
+  "verification": "live_boundary_probes_passed"
+}
