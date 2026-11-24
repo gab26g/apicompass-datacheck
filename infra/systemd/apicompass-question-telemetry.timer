@@ -1,0 +1,11 @@
+[Unit]
+Description=APICompass question telemetry every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00 UTC
+RandomizedDelaySec=5
+Persistent=true
+Unit=apicompass-question-telemetry.service
+
+[Install]
+WantedBy=timers.target

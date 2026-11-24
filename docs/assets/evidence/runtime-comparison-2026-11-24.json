@@ -1,0 +1,88 @@
+{
+  "before": {
+    "api_request_ids": [
+      "f18e3af8-0c93-4426-8d2e-4920eefc6dd5",
+      "409881ab-1cac-4064-98e1-a708e11f754a",
+      "399954ea-0b54-40a6-a949-86768b74a1f9",
+      "183acfce-7005-4d80-b52d-fbf964bb7e66",
+      "7fe0de25-80c9-464e-878c-cc68167dcfbf",
+      "ed7c4f2b-187a-4f2a-8936-66819c6f03b5",
+      "1210e78c-4578-4bf8-8b2e-74cc005061fd",
+      "163f90b0-5993-4a10-b145-61cce38efb41",
+      "77124897-4f1c-4c4d-a7cb-78ea4715ceb9",
+      "2f1ace5b-0a4b-4265-b067-c70fa632dc7e"
+    ],
+    "ended_utc": "2026-11-23T16:58:49.123696+00:00",
+    "host_cpu_percent": 11.816,
+    "host_disk_used_percent": 37.049,
+    "known_answer": [
+      60,
+      7,
+      7
+    ],
+    "label": "before_logging_update",
+    "limits": "Ten Docker-exec readiness-plus-issues probes over 30 seconds; includes Docker and S3 latency. Not full-answer latency, uptime, capacity, p95, cost or a long-term improvement study. Background jobs are not disabled.",
+    "max_ms": 780.166,
+    "mean_ms": 435.586,
+    "probe_duration_ms": [
+      780.166,
+      383.218,
+      386.14,
+      397.262,
+      374.137,
+      390.508,
+      384.534,
+      490.059,
+      375.096,
+      394.74
+    ],
+    "samples": 10,
+    "started_utc": "2026-11-23T16:58:18.585507+00:00",
+    "success_count": 10,
+    "window_seconds": 30
+  },
+  "after": {
+    "api_request_ids": [
+      "32b8aeb3-76f9-4271-ae3b-0d20352cebaa",
+      "d85e75f5-a4ef-4dc9-a5d9-080351dc50ca",
+      "84608145-0840-4491-856a-d7224be3fee4",
+      "2055830b-c80d-4168-9f62-9d858c9543d6",
+      "38c92f10-bb34-4b8e-abb5-d33ed26ececd",
+      "f4d038ee-129d-4e0d-ad0f-273219d9aa21",
+      "4dc57deb-265c-4384-9a50-6ee427d68152",
+      "0a27a6e6-41d8-4cfe-a3b0-ab733e0c3515",
+      "c8b369e7-0576-41f5-899e-2c9d2e12a9af",
+      "803c7c91-6506-4e28-975c-54a70dd03d7f"
+    ],
+    "ended_utc": "2026-11-23T17:05:22.070984+00:00",
+    "host_cpu_percent": 12.961,
+    "host_disk_used_percent": 37.055,
+    "known_answer": [
+      60,
+      7,
+      7
+    ],
+    "label": "after_logging_update",
+    "limits": "Ten Docker-exec readiness-plus-issues probes over 30 seconds; includes Docker and S3 latency. Not full-answer latency, uptime, capacity, p95, cost or a long-term improvement study. Background jobs are not disabled.",
+    "max_ms": 829.91,
+    "mean_ms": 440.767,
+    "probe_duration_ms": [
+      391.42,
+      418.082,
+      386.17,
+      829.91,
+      426.179,
+      390.894,
+      380.751,
+      381.786,
+      384.7,
+      417.779
+    ],
+    "samples": 10,
+    "started_utc": "2026-11-23T17:04:51.755699+00:00",
+    "success_count": 10,
+    "window_seconds": 30
+  },
+  "comparison": "Same ten known-answer Docker-exec probes, three-second spacing, thirty-second monotonic window. UTC start stamps precede configuration setup; setup is excluded from probe/window durations. Background workloads remain uncontrolled. No performance or cost improvement claimed.",
+  "source_commit_after": "6b12aebaac0a4a7f54cc224a01675c07d7a55f06"
+}

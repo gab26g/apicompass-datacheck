@@ -1,0 +1,11 @@
+[Unit]
+Description=APICompass database log shipment every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00 UTC
+RandomizedDelaySec=5
+Persistent=true
+Unit=apicompass-database-logs.service
+
+[Install]
+WantedBy=timers.target

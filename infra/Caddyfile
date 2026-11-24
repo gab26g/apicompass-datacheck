@@ -1,0 +1,17 @@
+{
+    # Certificate/account state persists in the production caddy-data volume.
+    admin off
+}
+
+{$APICOMPASS_HOSTNAME} {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+    # Streaming responses and websocket upgrades are handled by reverse_proxy.
+    reverse_proxy chat:3080
+    # No access log: avoid recording conversations, query strings or credentials.
+}

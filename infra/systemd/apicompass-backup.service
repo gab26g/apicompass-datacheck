@@ -1,0 +1,19 @@
+[Unit]
+Description=APICompass quiesced MongoDB backup to private versioned S3
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/apicompass/ops.env
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/apicompass
+EnvironmentFile=/etc/apicompass/ops.env
+ExecStart=/opt/apicompass-tools/bin/python scripts/ops_jobs.py backup
+TimeoutStartSec=40min
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+StandardOutput=journal
+StandardError=journal

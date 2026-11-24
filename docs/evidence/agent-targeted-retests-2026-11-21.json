@@ -1,0 +1,63 @@
+{
+  "observed_date": "2026-11-21",
+  "environment": "Local Docker; Gemini 3.5 Flash Lite; same fixture versions and model settings as v1",
+  "reviewer": "Codex-assisted review; student review pending",
+  "initial_evaluation": "assistant-evaluation-v1-2026-11-21.json",
+  "initial_score": "10 of 13 local cases passed; unchanged by these targeted retests",
+  "v2": [
+    {
+      "case_id": 11,
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "result": "Listed the three datasets and asked which to inspect, using one action instead of the original seven."
+    },
+    {
+      "case_id": 3,
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "request_id": "df1d110e-f6d0-41fa-9071-a0980aacd92b",
+      "result": "Delivered 60 rows, seven issues across seven rows and all seven findings without a stream error."
+    },
+    {
+      "case_id": 15,
+      "passed": false,
+      "conversation": "[private local conversation reference removed]",
+      "result": "Unnecessarily asked which dataset although the prompt named shipments; used catalog rather than verifying the actual columns."
+    }
+  ],
+  "v3": [
+    {
+      "case_id": 15,
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "request_id": "0d15cb8b-b563-44cf-9e1a-f0abd7bac23c",
+      "result": "Expanded tool trace showed the shipments profile and actual columns. Answer correctly said delay reasons, timelines and suppliers were absent, without unrelated issue counts."
+    },
+    {
+      "case_id": 11,
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "result": "Listed available datasets and asked which to inspect; one action."
+    },
+    {
+      "case_id": "H1",
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "request_id": "82a08083-94d0-4df2-a521-02d2a97abf8f",
+      "prompt": "Summarize shipment issue counts by validation rule, counting every row-level finding, and give the total.",
+      "result": "Correct rule counts: duplicate_id=2, range=2, type=1, required=1, category=1; total=7; seven affected rows. All seven findings also listed."
+    },
+    {
+      "case_id": 3,
+      "passed": true,
+      "conversation": "[private local conversation reference removed]",
+      "request_id": "613b0c7c-0819-43ff-9c85-26de4ef6fab7",
+      "result": "Delivered correct 60/7/7 totals and all seven findings; two actions; no stream error in this retest."
+    }
+  ],
+  "limitations": [
+    "Targeted retests are not a fresh full-suite score, not a production evaluation, and not evidence that provider stream errors cannot recur.",
+    "The earlier provider stream parse failure has no confirmed root cause.",
+    "Cases 13 and 14 remain unrun in the initial fixed evaluation."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "verification": "restored_login_conversation_action_tool_verified",
+  "backup_requested_utc": "2026-11-23T11:27:09Z",
+  "backup_key": "[private backup object key omitted]",
+  "version_id": "i_.0Y0qungVfBVyQImhandcZZpwTrUVx",
+  "archive_sha256": "a720fe7362b3d0a12a5f2282dc8c0c1eef197421a5b5d2e6172f7aa406278321",
+  "bytes": 18164,
+  "last_modified_utc": "2026-11-23T19:27:12+08:00",
+  "backup_job_request_id": "253b7dde-5339-419e-bbd8-9514fc5c1fd1",
+  "backup_job_duration_ms": 1828.32,
+  "baseline_counts": {
+    "actions": 1,
+    "agents": 1,
+    "conversations": 2,
+    "messages": 8,
+    "users": 1
+  },
+  "known_state": {
+    "actions": 1,
+    "agent": 1,
+    "conversation": 1,
+    "messages": 6
+  },
+  "restore_started_utc": "2026-11-23T11:36:41Z",
+  "restore_scope": "[assessment resource name omitted]",
+  "restore_ready_observed_utc": "2026-11-23T11:38:52Z",
+  "recovery_volumes_disjoint": true,
+  "fresh_volume_count": 5,
+  "restored_counts": {
+    "users": 1,
+    "conversations": 2,
+    "messages": 8,
+    "agents": 1,
+    "actions": 1
+  },
+  "restored_known_conversation_messages": 6,
+  "rto_seconds": 1438,
+  "limits": [
+    "1438 seconds is a conservative whole-drill observed recovery duration from the first attempt, including failed attempts, fixes, cleanup, private-login interaction and user confirmation. It is not automated restore speed.",
+    "The successful restored answer was persisted at 11:59:45.397Z; independent successful verification was observed at12:00:39Z.",
+    "Backup age at first drill start was572seconds (9m32s), using the conservative backup request time. This is a simulated recovery-point exposure, not observed production data loss or a guaranteed RPO.",
+    "Original production database was preserved; assessment copies used fresh volumes and were removed after proof."
+  ],
+  "verification_observed_utc": "2026-11-23T12:00:39Z",
+  "restored_answer_persisted_utc": "2026-11-23T11:59:45.397Z",
+  "restored_api_request_id": "9a4d3ffc-1673-48af-8dec-c0d4b50a80ae",
+  "successful_restore_scope": "[assessment resource name omitted]",
+  "cleanup_verified_zero_resources": true,
+  "production_health_after_cleanup": "Result=success; ExecMainStatus=0"
+}

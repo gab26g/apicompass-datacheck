@@ -1,0 +1,11 @@
+[Unit]
+Description=APICompass health every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00 UTC
+RandomizedDelaySec=15
+Persistent=true
+Unit=apicompass-health.service
+
+[Install]
+WantedBy=timers.target

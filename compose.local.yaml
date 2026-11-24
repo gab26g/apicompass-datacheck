@@ -1,0 +1,53 @@
+# Local development only: MongoDB has no host port; chat binds to loopback.
+name: apicompass-local
+services:
+  chat:
+    image: ghcr.io/librechat-ai/librechat@sha256:1e3bd3ac2cdbbcd64bdc4ef04c850d6fef5392d1fcb22cea46c5dcba17da7b95
+    platform: linux/amd64
+    ports:
+      - "127.0.0.1:3080:3080"
+    depends_on:
+      - mongodb
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/APICompass
+      DOMAIN_CLIENT: http://localhost:3080
+      DOMAIN_SERVER: http://localhost:3080
+      SEARCH: "false"
+      SCHEDULES_SINGLE_PROCESS: "true"
+      ENDPOINTS: google,agents
+      GOOGLE_KEY: user_provided
+      ALLOW_REGISTRATION: "true"
+      ALLOW_SOCIAL_LOGIN: "false"
+      JWT_SECRET: ${JWT_SECRET:?Run start-local.ps1}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Run start-local.ps1}
+      CREDS_KEY: ${CREDS_KEY:?Run start-local.ps1}
+      CREDS_IV: ${CREDS_IV:?Run start-local.ps1}
+      APP_TITLE: APICompass
+      CUSTOM_FOOTER: "APICompass · Read-only synthetic data checks. Built on [LibreChat](https://www.librechat.ai)."
+      CONFIG_PATH: /app/librechat.yaml
+    volumes:
+      - ./librechat.local.yaml:/app/librechat.yaml:ro
+      - ./branding/apicompass.css:/app/client/dist/assets/apicompass.css:ro
+      - ./branding/apicompass.svg:/app/client/dist/assets/apicompass.svg:ro
+      - ./branding/apicompass.svg:/app/client/dist/assets/logo.svg:ro
+      - ./.local/branding/index.html:/app/client/dist/index.html:ro
+      - ./.local/branding/index.html.gz:/app/client/dist/index.html.gz:ro
+      - ./.local/branding/index.html.br:/app/client/dist/index.html.br:ro
+      - chat-data:/app/data
+      - chat-uploads:/app/uploads
+      - chat-logs:/app/api/logs
+  mongodb:
+    image: mongo:8.0.20
+    command: [mongod, --bind_ip_all, --noauth]
+    volumes:
+      - mongodb-data:/data/db
+  datacheck:
+    build: ./datacheck
+volumes:
+  mongodb-data:
+  chat-data:
+  chat-uploads:
+  chat-logs:

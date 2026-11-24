@@ -1,0 +1,77 @@
+/* APICompass extends the pinned LibreChat tokens; high-contrast themes stay native. */
+html:not(.dark):not(.high-contrast-dark):not(.high-contrast-light) {
+  --presentation: 235 243 244;
+  --text-primary: 16 40 47;
+  --text-secondary: 62 89 97;
+  --text-secondary-alt: 70 96 103;
+  --text-tertiary: 70 96 103;
+  --text-muted: 70 96 103;
+  --accent-primary: 14 113 108;
+  --accent-primary-hover: 8 82 79;
+  --link: 10 105 114;
+  --link-hover: 7 76 84;
+  --header-primary: 245 249 249;
+  --header-hover: 224 237 239;
+  --header-button-hover: 224 237 239;
+  --surface-primary: 245 249 249;
+  --surface-primary-alt: 235 243 244;
+  --surface-primary-contrast: 225 237 239;
+  --surface-secondary: 231 240 241;
+  --surface-secondary-alt: 221 234 237;
+  --surface-tertiary: 221 234 237;
+  --surface-tertiary-alt: 245 249 249;
+  --surface-dialog: 250 253 253;
+  --surface-hover: 213 231 234;
+  --surface-hover-alt: 203 223 227;
+  --surface-composer-hover: 221 234 237;
+  --surface-active: 213 231 234;
+  --surface-active-alt: 203 223 227;
+  --surface-chat: 232 242 242;
+  --surface-submit: 10 112 104;
+  --surface-submit-hover: 8 82 79;
+  --border-light: 204 222 226;
+  --border-medium: 177 202 209;
+  --border-heavy: 112 147 157;
+  --ring-primary: 14 113 108;
+}
+
+html.dark:not(.high-contrast-dark):not(.high-contrast-light) {
+  --presentation: 18 39 49;
+  --text-primary: 237 246 248;
+  --text-secondary: 185 206 212;
+  --text-secondary-alt: 169 194 201;
+  --text-tertiary: 169 194 201;
+  --text-muted: 169 194 201;
+  --accent-primary: 119 224 207;
+  --accent-primary-hover: 168 240 226;
+  --link: 119 224 207;
+  --link-hover: 168 240 226;
+  --header-primary: 18 39 49;
+  --header-hover: 32 60 72;
+  --header-button-hover: 32 60 72;
+  --surface-primary: 14 30 40;
+  --surface-primary-alt: 18 39 49;
+  --surface-primary-contrast: 23 47 57;
+  --surface-secondary: 18 39 49;
+  --surface-secondary-alt: 23 47 57;
+  --surface-tertiary: 27 54 65;
+  --surface-tertiary-alt: 23 47 57;
+  --surface-dialog: 18 39 49;
+  --surface-hover: 32 60 72;
+  --surface-hover-alt: 39 72 84;
+  --surface-composer-hover: 32 60 72;
+  --surface-active: 39 72 84;
+  --surface-active-alt: 32 60 72;
+  --surface-chat: 23 47 57;
+  --surface-submit: 20 125 115;
+  --surface-submit-hover: 12 105 95;
+  --border-light: 40 68 80;
+  --border-medium: 53 80 91;
+  --border-heavy: 91 125 137;
+  --ring-primary: 119 224 207;
+}
+
+::selection { background: rgb(var(--surface-submit)); color: white; }
+textarea, input { caret-color: rgb(var(--accent-primary)); }
+a { text-underline-offset: 0.18em; }
+table, code { font-variant-numeric: tabular-nums; }

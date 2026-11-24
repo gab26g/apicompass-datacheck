@@ -1,0 +1,14 @@
+{
+  "equipment": {
+    "sha256": "26c77e1987cc6a8c40e1d14307c598dd6b15d177d8d9bdd8a0d2b380f41355d3",
+    "dataset_version": "equipment-v2"
+  },
+  "shipments": {
+    "sha256": "b8aef8c7a1e41d19074cef1da3cf2a48fbd3046b4f5311d5c58534aa0223aa18",
+    "dataset_version": "shipments-v2"
+  },
+  "inventory": {
+    "sha256": "f3f36dd99a056e43fea4568ed2874dcaf9e6124934556e89e9316688f2c02dff",
+    "dataset_version": "inventory-v2"
+  }
+}

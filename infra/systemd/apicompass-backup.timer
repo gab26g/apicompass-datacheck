@@ -1,0 +1,11 @@
+[Unit]
+Description=APICompass backup every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00 UTC
+RandomizedDelaySec=60
+Persistent=true
+Unit=apicompass-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,95 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "APICompass private storage, runtime role and finite-retention logs. No instance, credentials or public network access.",
+  "Resources": {
+    "ProjectBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketName": {"Fn::Sub": "apicompass-${AWS::AccountId}-${AWS::Region}"},
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true, "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true, "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {"Rules": [{"ObjectOwnership": "BucketOwnerEnforced"}]},
+        "VersioningConfiguration": {"Status": "Enabled"},
+        "BucketEncryption": {"ServerSideEncryptionConfiguration": [{"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]},
+        "LifecycleConfiguration": {"Rules": [
+          {"Id": "BackupRetention14Days", "Status": "Enabled", "Prefix": "backups/", "ExpirationInDays": 14, "NoncurrentVersionExpiration": {"NoncurrentDays": 14}},
+          {"Id": "AbortIncompleteUploads", "Status": "Enabled", "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 1}}
+        ]},
+        "Tags": [{"Key": "Project", "Value": "APICompass"}, {"Key": "Environment", "Value": "assessment"}]
+      }
+    },
+    "BucketTransportPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "ProjectBucket"},
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Sid": "DenyInsecureTransport", "Effect": "Deny", "Principal": "*", "Action": "s3:*",
+            "Resource": [{"Fn::GetAtt": ["ProjectBucket", "Arn"]}, {"Fn::Sub": "${ProjectBucket.Arn}/*"}],
+            "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+          }]
+        }
+      }
+    },
+    "RuntimeLogs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {"LogGroupName": "/apicompass/prod/runtime", "RetentionInDays": 14, "Tags": [{"Key": "Project", "Value": "APICompass"}]}
+    },
+    "QuestionLogs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {"LogGroupName": "/apicompass/prod/questions", "RetentionInDays": 14, "Tags": [{"Key": "Project", "Value": "APICompass"}]}
+    },
+    "JobLogs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {"LogGroupName": "/apicompass/prod/jobs", "RetentionInDays": 14, "Tags": [{"Key": "Project", "Value": "APICompass"}]}
+    },
+    "RuntimeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "Description": "EC2 runtime only: fixed project content, backups, secret path, logs and metrics; Session Manager channels.",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}]
+        },
+        "Tags": [{"Key": "Project", "Value": "APICompass"}],
+        "Policies": [{
+          "PolicyName": "APICompassRuntime",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {"Sid": "ReadProjectContentAndRecovery", "Effect": "Allow", "Action": ["s3:GetObject", "s3:GetObjectVersion"], "Resource": [
+                {"Fn::Sub": "${ProjectBucket.Arn}/datasets/v2/*"},
+                {"Fn::Sub": "${ProjectBucket.Arn}/releases/*"},
+                {"Fn::Sub": "${ProjectBucket.Arn}/backups/*"}
+              ]},
+              {"Sid": "WriteBackupsOnly", "Effect": "Allow", "Action": "s3:PutObject", "Resource": {"Fn::Sub": "${ProjectBucket.Arn}/backups/*"}},
+              {"Sid": "ListProjectPrefixes", "Effect": "Allow", "Action": ["s3:ListBucket", "s3:ListBucketVersions"], "Resource": {"Fn::GetAtt": ["ProjectBucket", "Arn"]}, "Condition": {"StringLike": {"s3:prefix": ["datasets/v2/*", "releases/*", "backups/*"]}}},
+              {"Sid": "ReadBucketRegion", "Effect": "Allow", "Action": "s3:GetBucketLocation", "Resource": {"Fn::GetAtt": ["ProjectBucket", "Arn"]}},
+              {"Sid": "ReadRuntimeSecrets", "Effect": "Allow", "Action": ["ssm:GetParameter", "ssm:GetParameters"], "Resource": {"Fn::Sub": "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/apicompass/prod/*"}},
+              {"Sid": "WriteExistingProjectLogs", "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"], "Resource": [
+                {"Fn::GetAtt": ["RuntimeLogs", "Arn"]}, {"Fn::GetAtt": ["QuestionLogs", "Arn"]}, {"Fn::GetAtt": ["JobLogs", "Arn"]}
+              ]},
+              {"Sid": "PublishProjectMetrics", "Effect": "Allow", "Action": "cloudwatch:PutMetricData", "Resource": "*", "Condition": {"StringEquals": {"cloudwatch:namespace": "APICompass"}}},
+              {"Sid": "RegisterManagedInstance", "Effect": "Allow", "Action": "ssm:UpdateInstanceInformation", "Resource": "*"},
+              {"Sid": "SessionManagerChannels", "Effect": "Allow", "Action": ["ssmmessages:CreateControlChannel", "ssmmessages:CreateDataChannel", "ssmmessages:OpenControlChannel", "ssmmessages:OpenDataChannel"], "Resource": "*"}
+            ]
+          }
+        }]
+      }
+    },
+    "RuntimeInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {"Roles": [{"Ref": "RuntimeRole"}]}
+    }
+  },
+  "Outputs": {
+    "ProjectBucketName": {"Value": {"Ref": "ProjectBucket"}},
+    "RuntimeRoleArn": {"Value": {"Fn::GetAtt": ["RuntimeRole", "Arn"]}},
+    "InstanceProfileName": {"Value": {"Ref": "RuntimeInstanceProfile"}},
+    "SecretPath": {"Value": "/apicompass/prod/"}
+  }
+}

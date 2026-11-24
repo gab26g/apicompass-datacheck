@@ -1,0 +1,19 @@
+[Unit]
+Description=APICompass private DataCheck known-answer and disk health
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/apicompass/ops.env
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/apicompass
+EnvironmentFile=/etc/apicompass/ops.env
+ExecStart=/opt/apicompass-tools/bin/python scripts/ops_jobs.py health
+TimeoutStartSec=3min
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+StandardOutput=journal
+StandardError=journal

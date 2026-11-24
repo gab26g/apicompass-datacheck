@@ -1,0 +1,62 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadRegionalOperations",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:DescribeAlarms", "cloudwatch:DescribeAlarmHistory", "cloudwatch:GetDashboard", "cloudwatch:ListDashboards", "cloudwatch:GetMetricData", "cloudwatch:GetMetricStatistics", "cloudwatch:ListMetrics", "ec2:DescribeInstances", "ec2:DescribeInstanceStatus", "ec2:DescribeVolumes", "ssm:DescribeInstanceInformation", "ssm:DescribeSessions", "cloudformation:DescribeStacks", "cloudformation:DescribeStackEvents", "cloudformation:ListStackResources"],
+      "Resource": "*",
+      "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-1"}}
+    },
+    {
+      "Sid": "ReadProjectLogs",
+      "Effect": "Allow",
+      "Action": ["logs:DescribeLogStreams", "logs:GetLogEvents", "logs:FilterLogEvents"],
+      "Resource": "arn:aws:logs:ap-southeast-1:ACCOUNT_ID:log-group:/apicompass/prod/*:*"
+    },
+    {
+      "Sid": "ListRegionalLogGroups",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-1"}}
+    },
+    {
+      "Sid": "StartProjectShellOnly",
+      "Effect": "Allow",
+      "Action": "ssm:StartSession",
+      "Resource": ["arn:aws:ec2:ap-southeast-1:ACCOUNT_ID:instance/INSTANCE_ID", "arn:aws:ssm:ap-southeast-1:ACCOUNT_ID:document/SSM-SessionManagerRunShell", "arn:aws:ssm:ap-southeast-1::document/SSM-SessionManagerRunShell"]
+    },
+    {
+      "Sid": "OwnSessionsOnly",
+      "Effect": "Allow",
+      "Action": ["ssm:ResumeSession", "ssm:TerminateSession"],
+      "Resource": "arn:aws:ssm:ap-southeast-1:ACCOUNT_ID:session/${aws:username}-*"
+    },
+    {
+      "Sid": "OwnPasswordAndMfa",
+      "Effect": "Allow",
+      "Action": ["iam:GetUser", "iam:ChangePassword", "iam:ListMFADevices", "iam:EnableMFADevice", "iam:ResyncMFADevice"],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:user/${aws:username}"
+    },
+    {
+      "Sid": "CreateOwnVirtualMfa",
+      "Effect": "Allow",
+      "Action": "iam:CreateVirtualMFADevice",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:mfa/${aws:username}"
+    },
+    {
+      "Sid": "ReadAccountPasswordAndMfaSetup",
+      "Effect": "Allow",
+      "Action": ["iam:GetAccountPasswordPolicy", "iam:ListVirtualMFADevices", "iam:GetAccountSummary"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RequireMfaForOperationalAccess",
+      "Effect": "Deny",
+      "NotAction": ["iam:GetUser", "iam:ChangePassword", "iam:GetAccountPasswordPolicy", "iam:ListMFADevices", "iam:CreateVirtualMFADevice", "iam:EnableMFADevice", "iam:ResyncMFADevice", "iam:ListVirtualMFADevices", "iam:GetAccountSummary"],
+      "Resource": "*",
+      "Condition": {"BoolIfExists": {"aws:MultiFactorAuthPresent": "false"}}
+    }
+  ]
+}

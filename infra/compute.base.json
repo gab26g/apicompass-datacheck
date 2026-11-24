@@ -1,0 +1,49 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "APICompass single-host assessment compute. Only HTTP/HTTPS inbound; no SSH, NAT, load balancer or additional database.",
+  "Parameters": {
+    "LatestAmi": {"Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>", "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"},
+    "RuntimeInstanceProfile": {"Type": "String", "AllowedPattern": "apicompass-foundation-RuntimeInstanceProfile-[A-Za-z0-9]+", "Description": "Existing foundation output. This stack creates no IAM roles."}
+  },
+  "Resources": {
+    "Vpc": {"Type": "AWS::EC2::VPC", "Properties": {"CidrBlock": "10.73.0.0/16", "EnableDnsHostnames": true, "EnableDnsSupport": true, "Tags": [{"Key": "Project", "Value": "APICompass"}]}},
+    "InternetGateway": {"Type": "AWS::EC2::InternetGateway", "Properties": {"Tags": [{"Key": "Project", "Value": "APICompass"}]}},
+    "GatewayAttachment": {"Type": "AWS::EC2::VPCGatewayAttachment", "Properties": {"VpcId": {"Ref": "Vpc"}, "InternetGatewayId": {"Ref": "InternetGateway"}}},
+    "Subnet": {"Type": "AWS::EC2::Subnet", "Properties": {"VpcId": {"Ref": "Vpc"}, "CidrBlock": "10.73.1.0/24", "MapPublicIpOnLaunch": false, "Tags": [{"Key": "Project", "Value": "APICompass"}]}},
+    "RouteTable": {"Type": "AWS::EC2::RouteTable", "Properties": {"VpcId": {"Ref": "Vpc"}, "Tags": [{"Key": "Project", "Value": "APICompass"}]}},
+    "InternetRoute": {"Type": "AWS::EC2::Route", "DependsOn": "GatewayAttachment", "Properties": {"RouteTableId": {"Ref": "RouteTable"}, "DestinationCidrBlock": "0.0.0.0/0", "GatewayId": {"Ref": "InternetGateway"}}},
+    "SubnetRouteAssociation": {"Type": "AWS::EC2::SubnetRouteTableAssociation", "Properties": {"SubnetId": {"Ref": "Subnet"}, "RouteTableId": {"Ref": "RouteTable"}}},
+    "WebSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup", "Properties": {
+        "GroupDescription": "APICompass web entry only; administration via Session Manager",
+        "VpcId": {"Ref": "Vpc"},
+        "SecurityGroupIngress": [
+          {"IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIp": "0.0.0.0/0", "Description": "HTTPS redirect and ACME HTTP challenge"},
+          {"IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "CidrIp": "0.0.0.0/0", "Description": "APICompass HTTPS"}
+        ],
+        "SecurityGroupEgress": [{"IpProtocol": "-1", "CidrIp": "0.0.0.0/0", "Description": "Registry, AWS APIs, model provider and certificate services"}],
+        "Tags": [{"Key": "Project", "Value": "APICompass"}]
+      }
+    },
+    "Host": {
+      "Type": "AWS::EC2::Instance", "DependsOn": ["InternetRoute", "SubnetRouteAssociation"],
+      "Properties": {
+        "InstanceType": "t3.small", "ImageId": {"Ref": "LatestAmi"},
+        "IamInstanceProfile": {"Ref": "RuntimeInstanceProfile"},
+        "CreditSpecification": {"CPUCredits": "standard"},
+        "MetadataOptions": {"HttpTokens": "required", "HttpPutResponseHopLimit": 2, "HttpEndpoint": "enabled", "InstanceMetadataTags": "disabled"},
+        "BlockDeviceMappings": [{"DeviceName": "/dev/xvda", "Ebs": {"VolumeSize": 24, "VolumeType": "gp3", "Encrypted": true, "DeleteOnTermination": true}}],
+        "NetworkInterfaces": [{"DeviceIndex": "0", "AssociatePublicIpAddress": true, "DeleteOnTermination": true, "SubnetId": {"Ref": "Subnet"}, "GroupSet": [{"Ref": "WebSecurityGroup"}]}],
+        "Tags": [{"Key": "Name", "Value": "APICompass-Assessment"}, {"Key": "Project", "Value": "APICompass"}, {"Key": "Environment", "Value": "assessment"}]
+      }
+    },
+    "PublicAddress": {"Type": "AWS::EC2::EIP", "DependsOn": "GatewayAttachment", "Properties": {"Domain": "vpc", "Tags": [{"Key": "Project", "Value": "APICompass"}]}},
+    "AddressAssociation": {"Type": "AWS::EC2::EIPAssociation", "Properties": {"AllocationId": {"Fn::GetAtt": ["PublicAddress", "AllocationId"]}, "InstanceId": {"Ref": "Host"}}}
+  },
+  "Outputs": {
+    "InstanceId": {"Value": {"Ref": "Host"}},
+    "PublicIp": {"Value": {"Ref": "PublicAddress"}},
+    "Hostname": {"Value": {"Fn::Sub": "${PublicAddress}.sslip.io"}},
+    "ApplicationUrl": {"Value": {"Fn::Sub": "https://${PublicAddress}.sslip.io"}}
+  }
+}

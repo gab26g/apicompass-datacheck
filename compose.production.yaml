@@ -1,0 +1,143 @@
+# Fresh production volumes; never attach local MongoDB data or re-key local users.
+name: apicompass-prod
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  chat:
+    image: ghcr.io/librechat-ai/librechat@sha256:1e3bd3ac2cdbbcd64bdc4ef04c850d6fef5392d1fcb22cea46c5dcba17da7b95
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      datacheck:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      NODE_ENV: production
+      NODE_OPTIONS: --require=/app/question-telemetry.cjs
+      APICOMPASS_QUESTION_TELEMETRY: "1"
+      APICOMPASS_LOG_QUESTIONS: "1"
+      APICOMPASS_VERSION: apicompass-runtime-v3
+      MONGO_URI: ${MONGO_URI:?Use scripts/start-production.sh}
+      DOMAIN_CLIENT: https://${APICOMPASS_HOSTNAME:?Set the public DNS hostname}
+      DOMAIN_SERVER: https://${APICOMPASS_HOSTNAME:?Set the public DNS hostname}
+      TRUST_PROXY: "1"
+      SEARCH: "false"
+      SCHEDULES_SINGLE_PROCESS: "true"
+      ENDPOINTS: google,agents
+      GOOGLE_KEY: ${GOOGLE_KEY:?Use the runtime loader}
+      GOOGLE_MODELS: gemini-3.5-flash-lite
+      GOOGLE_TITLE_MODEL: gemini-3.5-flash-lite
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "false"
+      JWT_SECRET: ${JWT_SECRET:?Use the runtime loader}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Use the runtime loader}
+      CREDS_KEY: ${CREDS_KEY:?Use the runtime loader}
+      CREDS_IV: ${CREDS_IV:?Use the runtime loader}
+      APP_TITLE: APICompass
+      CUSTOM_FOOTER: "APICompass · Invented data only. Sanitized questions and request outcomes are logged for 14 days. Built on [LibreChat](https://www.librechat.ai)."
+      CONFIG_PATH: /app/librechat.yaml
+    volumes:
+      - ./scripts/question-telemetry.cjs:/app/question-telemetry.cjs:ro
+      - ./scripts/bind_production_action.cjs:/app/bind-production-action.cjs:ro
+      - ./librechat.production.yaml:/app/librechat.yaml:ro
+      - ./branding/apicompass.css:/app/client/dist/assets/apicompass.css:ro
+      - ./branding/apicompass.svg:/app/client/dist/assets/apicompass.svg:ro
+      - ./branding/apicompass.svg:/app/client/dist/assets/logo.svg:ro
+      - ./.local/branding/index.html:/app/client/dist/index.html:ro
+      - ./.local/branding/index.html.gz:/app/client/dist/index.html.gz:ro
+      - ./.local/branding/index.html.br:/app/client/dist/index.html.br:ro
+      - chat-data:/app/data
+      - chat-uploads:/app/uploads
+      - chat-logs:/app/api/logs
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 9
+      start_period: 60s
+    logging: *bounded-logs
+  mongodb:
+    image: mongo:8.0.20
+    restart: unless-stopped
+    command: [mongod, --bind_ip_all, --auth]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Use the runtime loader}
+      MONGO_INITDB_DATABASE: APICompass
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Use the runtime loader}
+    configs:
+      - source: mongo-app-init
+        target: /docker-entrypoint-initdb.d/10-apicompass.js
+    volumes:
+      - mongodb-data:/data/db
+    tmpfs:
+      - /run:size=16m,mode=0700
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "const a=db.getSiblingDB('APICompass'); a.auth('apicompass',process.env.MONGO_APP_PASSWORD); const s=a.runCommand({connectionStatus:1}); if(!s.authInfo.authenticatedUsers.some(u=>u.user==='apicompass'&&u.db==='APICompass'))quit(1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging: *bounded-logs
+  datacheck:
+    build: ./datacheck
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    environment:
+      DATACHECK_ENV: production
+      DATACHECK_STORAGE: s3
+      DATACHECK_API_TOKEN: ${DATACHECK_API_TOKEN:?Use the runtime loader}
+      DATACHECK_S3_BUCKET: ${DATACHECK_S3_BUCKET:?Set the private bucket name}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_EC2_METADATA_DISABLED: "false"
+      PYTHONDONTWRITEBYTECODE: "1"
+    healthcheck:
+      test: [CMD, python, -c, "import os,urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/health/ready',headers={'Authorization':'Bearer '+os.environ['DATACHECK_API_TOKEN']}); urllib.request.urlopen(req, timeout=12).close()"]
+      interval: 30s
+      timeout: 15s
+      retries: 4
+      start_period: 30s
+    logging: *bounded-logs
+  proxy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APICOMPASS_HOSTNAME: ${APICOMPASS_HOSTNAME:?Set the public DNS hostname}
+    depends_on:
+      chat:
+        condition: service_healthy
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *bounded-logs
+configs:
+  mongo-app-init:
+    content: |
+      // Evaluated only for an empty production volume by the official entrypoint.
+      const password = process.env.MONGO_APP_PASSWORD;
+      if (!password) throw new Error('Missing production application password');
+      db.getSiblingDB('APICompass').createUser({
+        user: 'apicompass', pwd: password,
+        roles: [{ role: 'readWrite', db: 'APICompass' }]
+      });
+volumes:
+  mongodb-data:
+  chat-data:
+  chat-uploads:
+  chat-logs:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,270 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "APICompass single-host assessment compute. Only HTTP/HTTPS inbound; no SSH, NAT, load balancer or additional database.",
+  "Parameters": {
+    "LatestAmi": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+    },
+    "RuntimeInstanceProfile": {
+      "Type": "String",
+      "AllowedPattern": "apicompass-foundation-RuntimeInstanceProfile-[A-Za-z0-9]+",
+      "Description": "Existing foundation output. This stack creates no IAM roles."
+    }
+  },
+  "Resources": {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.73.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "GatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.73.1.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "InternetRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "GatewayAttachment",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "SubnetRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        }
+      }
+    },
+    "WebSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "APICompass web entry only; administration via Session Manager",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "HTTPS redirect and ACME HTTP challenge"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "APICompass HTTPS"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Registry, AWS APIs, model provider and certificate services"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "Host": {
+      "Type": "AWS::EC2::Instance",
+      "DependsOn": [
+        "InternetRoute",
+        "SubnetRouteAssociation"
+      ],
+      "Properties": {
+        "InstanceType": "t3.small",
+        "ImageId": {
+          "Ref": "LatestAmi"
+        },
+        "IamInstanceProfile": {
+          "Ref": "RuntimeInstanceProfile"
+        },
+        "CreditSpecification": {
+          "CPUCredits": "standard"
+        },
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 2,
+          "HttpEndpoint": "enabled",
+          "InstanceMetadataTags": "disabled"
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "VolumeSize": 24,
+              "VolumeType": "gp3",
+              "Encrypted": true,
+              "DeleteOnTermination": true
+            }
+          }
+        ],
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "AssociatePublicIpAddress": true,
+            "DeleteOnTermination": true,
+            "SubnetId": {
+              "Ref": "Subnet"
+            },
+            "GroupSet": [
+              {
+                "Ref": "WebSecurityGroup"
+              }
+            ]
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "APICompass-Assessment"
+          },
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          },
+          {
+            "Key": "Environment",
+            "Value": "assessment"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash\n",
+                "set -eu\numask 077\n# UserData contains no secrets; its output is safe for the host bootstrap log.\n# AL2023 includes curl-minimal; installing full curl alongside it conflicts.\ndnf install -y docker python3.12 python3.12-pip unzip\nsystemctl enable --now docker amazon-ssm-agent\ninstall -d -m 0755 /usr/local/lib/docker/cli-plugins\ncd /var/tmp\ncurl --fail --location --retry 5 --output docker-compose-linux-x86_64 https://github.com/docker/compose/releases/download/v5.8.0/docker-compose-linux-x86_64\ncurl --fail --location --retry 5 --output docker-compose-linux-x86_64.sha256 https://github.com/docker/compose/releases/download/v5.8.0/docker-compose-linux-x86_64.sha256\nsha256sum --check docker-compose-linux-x86_64.sha256\ninstall -m 0755 docker-compose-linux-x86_64 /usr/local/lib/docker/cli-plugins/docker-compose\nrm -f docker-compose-linux-x86_64 docker-compose-linux-x86_64.sha256\ncurl --fail --location --retry 5 --output buildx-v0.39.1.linux-amd64 https://github.com/docker/buildx/releases/download/v0.39.1/buildx-v0.39.1.linux-amd64\ncurl --fail --location --retry 5 --output buildx-checksums.txt https://github.com/docker/buildx/releases/download/v0.39.1/checksums.txt\ngrep 'buildx-v0.39.1.linux-amd64$' buildx-checksums.txt | sha256sum --check -\ninstall -m 0755 buildx-v0.39.1.linux-amd64 /usr/local/lib/docker/cli-plugins/docker-buildx\nrm -f buildx-v0.39.1.linux-amd64 buildx-checksums.txt\npython3.12 -m venv /opt/apicompass-tools\n/opt/apicompass-tools/bin/pip install --disable-pip-version-check boto3==1.44.9\ninstall -d -m 0700 /opt/apicompass\n# A small swap file gives container startup headroom. EBS is encrypted by the template.\nif ! test -f /swapfile-apicompass; then\n    dd if=/dev/zero of=/swapfile-apicompass bs=1M count=2048 status=none\n    chmod 0600 /swapfile-apicompass\n    mkswap /swapfile-apicompass\nfi\nif ! swapon --show=NAME --noheadings | grep -Fxq /swapfile-apicompass; then\n    swapon /swapfile-apicompass\nfi\nif ! grep -q '^/swapfile-apicompass ' /etc/fstab; then\n    printf '/swapfile-apicompass none swap sw 0 0\\n' >> /etc/fstab\nfi\ndocker compose version\nprintf 'Host prerequisites ready; application and secrets are not installed.\\n' > /opt/apicompass-bootstrap.READY\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "PublicAddress": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": "GatewayAttachment",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "APICompass"
+          }
+        ]
+      }
+    },
+    "AddressAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "PublicAddress",
+            "AllocationId"
+          ]
+        },
+        "InstanceId": {
+          "Ref": "Host"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "Host"
+      }
+    },
+    "PublicIp": {
+      "Value": {
+        "Ref": "PublicAddress"
+      }
+    },
+    "Hostname": {
+      "Value": {
+        "Fn::Sub": "${PublicAddress}.sslip.io"
+      }
+    },
+    "ApplicationUrl": {
+      "Value": {
+        "Fn::Sub": "https://${PublicAddress}.sslip.io"
+      }
+    }
+  }
+}
